@@ -8,3 +8,7 @@ __pycache__/
 # private keys
 keys/*_private.pem
 keys/*.key
+
+# private keys
+keys/*_private.pem
+keys/*.key
