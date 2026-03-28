@@ -1,98 +1,135 @@
-# Stage235: GitHub Verified Commit (GPG Identity Binding)
-
-This stage binds a local GPG signing key to a GitHub account,
-enabling GitHub to display **Verified** status for signed commits.
+cat > README.md << 'EOF'
+# QSP Stage236 — Signed Release / Supply Chain Security
 
 ## Overview
 
-Stage234 introduced real cryptographic signing using:
+Stage236 introduces signed tags and signed release artifacts for QSP.
 
-- Ed25519 keys for repository-level signing
-- GPG keys for identity-based signing
+This stage extends the project from repository integrity toward distribution integrity.
 
-Stage235 extends this by linking the GPG public key to GitHub,
-so that signed commits can be verified on the GitHub platform itself.
+The goal is to make distributed artifacts independently verifiable through:
 
-## What This Enables
+- signed Git tags
+- signed GitHub Releases
+- SHA256 digest verification
+- GPG signature verification
 
-- GitHub **Verified** badge on commits
-- Stronger commit authorship authenticity
-- Public auditability of commit origin
-- Platform-level identity binding for signed commits
+This moves QSP into the supply chain security layer.
 
-## Verification Flow
+---
 
-Local commit signed with private GPG key  
-↓  
-GitHub receives the signed commit  
-↓  
-GitHub matches the signature to the registered public key  
-↓  
-**Verified** badge is displayed
+## What This Stage Adds
 
-## Requirements
+- Signed Git tag: `v0.236`
+- GitHub Release with attached artifacts
+- SHA256 checksum for release artifact
+- Detached GPG signature for release artifact
 
-- Local GPG key pair
-- Public GPG key registered on GitHub
-- Git configured to use the signing key
-- Verified email address on GitHub matching the GPG identity
+Release artifacts:
 
-## Local Setup
+- artifacts/qsp-stage236.tar.gz
+- artifacts/qsp-stage236.sha256
+- artifacts/qsp-stage236.tar.gz.asc
 
-### 1. Check the GPG key
+---
 
-```bash
-gpg --list-secret-keys --keyid-format=long
-2. Configure Git signing
-git config --global user.name "Motohiro Suzuki"
-git config --global user.email "mokkun.suzuki@gmail.com"
-git config --global user.signingkey 395BFEB61D50FB25
-git config --global commit.gpgsign true
-3. Ensure GPG agent works
-export GPG_TTY=$(tty)
-Export Public Key
-gpg --armor --export 395BFEB61D50FB25 > gpg_pubkeys/stage235_github_public.asc
+## Why It Matters
 
-Register the exported public key on GitHub:
+Previous stages established:
 
-Settings → SSH and GPG keys → New GPG key
+- claim-to-evidence linkage
+- signed evidence bundles
+- transparency logs
+- Merkle proofs
+- signed checkpoints
+- multi-signer verification
+- GitHub verified commits
 
-Create a Signed Commit
-git commit -S -m "Stage235: GitHub Verified commit (GPG identity binding)"
-git push
-Expected Result
+Stage236 adds authenticity guarantees for the distributed package itself.
 
-On GitHub, the commit should display:
+This means:
 
-Verified
+- users can verify what they downloaded
+- tampering can be detected independently
+- origin can be checked cryptographically
+- release integrity is no longer based only on trust in hosting
 
-Verification Notes
-Verified means GitHub successfully verified the commit signature
-This is a strong proof of commit authenticity on the platform
-It is not an absolute real-world identity guarantee
-Private keys must never be committed
-Stage Progression
-Stage233 → External signature verification structure
-Stage234 → Real cryptographic signing with Ed25519 and GPG
-Stage235 → GitHub platform-level verified commit identity
-Security Model Extension
+---
 
-The system now binds:
+## Verification
 
-Claim
-↓
-Evidence
-↓
-Manifest
-↓
-Signature
-↓
-GitHub Verified Identity
+### 1. Verify SHA256
 
-This connects cryptographic proof with platform-level identity verification.
+shasum -a 256 artifacts/qsp-stage236.tar.gz
 
-License
+Compare with:
 
-MIT License
+cat artifacts/qsp-stage236.sha256
 
-© 2025 Motohiro Suzuki
+---
+
+### 2. Verify GPG Signature
+
+gpg --verify artifacts/qsp-stage236.tar.gz.asc artifacts/qsp-stage236.tar.gz
+
+Expected:
+
+- Good signature from project key
+- Artifact integrity confirmed
+
+---
+
+### 3. Verify Signed Tag
+
+git tag -v v0.236
+
+---
+
+## Security Value
+
+Stage236 improves supply chain trust:
+
+- protects release authenticity
+- enables independent verification
+- strengthens artifact integrity
+- bridges repository trust → distribution trust
+
+This stage answers:
+
+"Is the distributed artifact truly produced by the project owner?"
+
+---
+
+## Evolution Path
+
+Claim  
+→ Evidence  
+→ CI linkage  
+→ Signed evidence  
+→ Transparency log  
+→ Merkle proof  
+→ Signed checkpoint  
+→ Checkpoint history  
+→ External monitor  
+→ Independent verification  
+→ Executable PoC  
+→ Fail evidence persistence  
+→ Signed fail evidence  
+→ Signed bundles  
+→ Multi-signer  
+→ External signatures  
+→ GitHub verified commits  
+→ **Signed Release (Stage236)**
+
+---
+
+## Release
+
+https://github.com/mokkunsuzuki-code/stage236/releases/tag/v0.236
+
+---
+
+## License
+
+MIT License © 2025 Motohiro Suzuki
+EOF
