@@ -1,137 +1,147 @@
-Stage237 introduces **Software Bill of Materials (SBOM)** and **Build Provenance** into QSP.
+Stage238: SLSA-aligned Build via Reusable Workflow and Policy
 
-This stage extends the project from:
+## Overview
 
-👉 verifying *artifacts*  
-to  
-👉 verifying the *entire build process*
+Stage238 upgrades the build and attestation model from a single workflow implementation to a **policy-governed reusable workflow architecture**.
 
-The goal is:
+This stage ensures that:
 
-> **Make software not only verifiable, but traceable.**
-
----
-
-## What is added in Stage237
-
-### 1. SBOM (Software Bill of Materials)
-
-
-out/sbom/stage237_repo.spdx.json
-
-
-- SPDX JSON format
-- Full visibility of project contents
-- Enables dependency transparency and auditing
+- All build provenance is generated through a centralized reusable workflow
+- SBOM generation and attestation are standardized
+- Build logic is no longer duplicated across workflows
+- Supply-chain evidence generation becomes policy-bound
 
 ---
 
-### 2. Reproducible Build Artifact
+## Key Concept
 
+Previous stage:
 
-dist/stage237_source_bundle.tar.gz
-dist/stage237_source_bundle.tar.gz.sha256
+Stage237  
+→ Attestation is generated
 
+Stage238:
 
-- Deterministic source bundle
-- SHA256 integrity verification
-
----
-
-### 3. Build Provenance
-
-Generated via GitHub Actions:
-
-- Source commit
-- Workflow execution
-- Build environment
-
-👉 The origin of the artifact becomes verifiable
+→ **Attestation generation is standardized and enforced via reusable workflow + policy**
 
 ---
 
-### 4. Artifact Attestation
+## Architecture
 
-Using:
+### 1. Caller Workflow (Policy Entry Point)
 
+`.github/workflows/stage238-slsa-policy.yml`
 
-actions/attest@v4
-
-
-- Cryptographic attestation tied to GitHub Actions
-- Tamper detection
-- Verifiable build origin
+- Defines allowed entrypoint
+- Delegates execution to reusable workflow
+- Does not implement build logic directly
 
 ---
 
-## Workflow
+### 2. Reusable Workflow (Policy Core)
 
+`.github/workflows/reusable-slsa-build.yml`
 
-.github/workflows/stage237-sbom-provenance.yml
+Responsible for:
 
-
-Pipeline:
-
-1. Build artifact
-2. Generate SBOM (Syft)
-3. Upload artifacts
-4. Generate provenance attestation
+- Artifact build
+- SHA256 digest generation
+- SBOM generation (SPDX via Syft)
+- Artifact upload
+- Build provenance attestation
+- SBOM attestation
 
 ---
 
-## Verification
+### 3. Policy Document
 
-### Verify Artifact Integrity
+`docs/slsa_policy.md`
+
+Defines:
+
+- Allowed build path
+- Required permissions
+- Expected outputs
+- Reviewer verification points
+
+---
+
+## Build Outputs
+
+- `stage238-source-bundle.tar.gz`
+- `stage238-source-bundle.sha256`
+- SPDX SBOM (`.spdx.json`)
+- GitHub build provenance attestation
+- GitHub SBOM attestation
+- Sigstore signature
+- Rekor transparency log entry
+
+---
+
+## Security Meaning
+
+This stage does NOT claim:
+
+- Full SLSA compliance
+- Complete supply-chain security guarantees
+
+Instead, it provides:
+
+- Governance over how provenance is generated
+- Reproducible and auditable build structure
+- Standardized attestation pipeline
+
+---
+
+## Local Verification
 
 ```bash
-shasum -a 256 dist/stage237_source_bundle.tar.gz
-cat dist/stage237_source_bundle.tar.gz.sha256
-Inspect SBOM
-cat out/sbom/stage237_repo.spdx.json
-Verify Provenance
-gh attestation verify dist/stage237_source_bundle.tar.gz \
-  -R mokkunsuzuki-code/stage237
-Why this matters
+python3 tools/verify_stage238_policy.py
+./tools/build_stage238_artifact.sh
+GitHub Actions Verification
 
-Previous stages established:
+Run:
 
-Claim
-→ Evidence
-→ Signature
-→ Transparency
-→ Signed Release
+stage238-slsa-policy
 
-Stage237 adds:
+Verify:
 
-→ SBOM
-→ Build Provenance
-Security Impact
+Artifact uploaded
+SBOM generated
+Provenance attestation created
+SBOM attestation created
+Rekor transparency entry exists
+Reviewer Guide
 
-Stage237 ensures:
+A reviewer should confirm:
 
-What is included (SBOM)
-Where it came from (Provenance)
-That it was not tampered with (Attestation)
+Caller workflow only invokes reusable workflow
+Reusable workflow uses workflow_call
+Attestation steps are centralized
+No duplicate build logic exists
+Outputs are consistent across runs
+Why This Matters
 
-👉 This enables Supply Chain Security
+This stage shifts the system from:
 
-Evolution Path
-Claim
-→ Evidence
-→ CI Integration
-→ Signed Evidence
-→ Transparency Log
-→ Merkle Proof
-→ Multi-Signature
-→ Verified Commits
-→ Signed Release (Stage236)
-→ SBOM + Provenance (Stage237)
-Conclusion
+"Attestation exists"
 
-Stage237 transitions QSP into a new class of systems:
+to:
 
-From verifiable artifacts
-to verifiable software supply chains
+"Attestation is generated through a controlled, reusable, policy-defined path"
+
+This improves:
+
+Reproducibility
+Auditability
+Trust in supply-chain evidence
+Next Stage
+
+Stage239:
+
+→ Verification Policy Enforcement
+
+Only artifacts that satisfy policy conditions are accepted.
 
 License
 
