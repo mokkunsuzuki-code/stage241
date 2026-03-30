@@ -3,6 +3,9 @@ name: slsa-governed-build
 on:
   workflow_call:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 permissions:
   contents: read
   id-token: write
@@ -14,7 +17,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Build source bundle artifact
         run: |
@@ -32,13 +35,13 @@ jobs:
           test -f out/policy/stage239-source-bundle.spdx.json
 
       - name: Upload source bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: stage239-source-bundle
           path: stage239-source-bundle.tar.gz
 
       - name: Upload SBOM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: stage239-source-bundle-sbom
           path: out/policy/stage239-source-bundle.spdx.json
