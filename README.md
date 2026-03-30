@@ -1,135 +1,138 @@
-cat > README.md << 'EOF'
-# QSP Stage236 — Signed Release / Supply Chain Security
+Stage237 introduces **Software Bill of Materials (SBOM)** and **Build Provenance** into QSP.
 
-## Overview
+This stage extends the project from:
 
-Stage236 introduces signed tags and signed release artifacts for QSP.
+👉 verifying *artifacts*  
+to  
+👉 verifying the *entire build process*
 
-This stage extends the project from repository integrity toward distribution integrity.
+The goal is:
 
-The goal is to make distributed artifacts independently verifiable through:
-
-- signed Git tags
-- signed GitHub Releases
-- SHA256 digest verification
-- GPG signature verification
-
-This moves QSP into the supply chain security layer.
+> **Make software not only verifiable, but traceable.**
 
 ---
 
-## What This Stage Adds
+## What is added in Stage237
 
-- Signed Git tag: `v0.236`
-- GitHub Release with attached artifacts
-- SHA256 checksum for release artifact
-- Detached GPG signature for release artifact
+### 1. SBOM (Software Bill of Materials)
 
-Release artifacts:
 
-- artifacts/qsp-stage236.tar.gz
-- artifacts/qsp-stage236.sha256
-- artifacts/qsp-stage236.tar.gz.asc
+out/sbom/stage237_repo.spdx.json
+
+
+- SPDX JSON format
+- Full visibility of project contents
+- Enables dependency transparency and auditing
 
 ---
 
-## Why It Matters
+### 2. Reproducible Build Artifact
 
-Previous stages established:
 
-- claim-to-evidence linkage
-- signed evidence bundles
-- transparency logs
-- Merkle proofs
-- signed checkpoints
-- multi-signer verification
-- GitHub verified commits
+dist/stage237_source_bundle.tar.gz
+dist/stage237_source_bundle.tar.gz.sha256
 
-Stage236 adds authenticity guarantees for the distributed package itself.
 
-This means:
+- Deterministic source bundle
+- SHA256 integrity verification
 
-- users can verify what they downloaded
-- tampering can be detected independently
-- origin can be checked cryptographically
-- release integrity is no longer based only on trust in hosting
+---
+
+### 3. Build Provenance
+
+Generated via GitHub Actions:
+
+- Source commit
+- Workflow execution
+- Build environment
+
+👉 The origin of the artifact becomes verifiable
+
+---
+
+### 4. Artifact Attestation
+
+Using:
+
+
+actions/attest@v4
+
+
+- Cryptographic attestation tied to GitHub Actions
+- Tamper detection
+- Verifiable build origin
+
+---
+
+## Workflow
+
+
+.github/workflows/stage237-sbom-provenance.yml
+
+
+Pipeline:
+
+1. Build artifact
+2. Generate SBOM (Syft)
+3. Upload artifacts
+4. Generate provenance attestation
 
 ---
 
 ## Verification
 
-### 1. Verify SHA256
+### Verify Artifact Integrity
 
-shasum -a 256 artifacts/qsp-stage236.tar.gz
+```bash
+shasum -a 256 dist/stage237_source_bundle.tar.gz
+cat dist/stage237_source_bundle.tar.gz.sha256
+Inspect SBOM
+cat out/sbom/stage237_repo.spdx.json
+Verify Provenance
+gh attestation verify dist/stage237_source_bundle.tar.gz \
+  -R mokkunsuzuki-code/stage237
+Why this matters
 
-Compare with:
+Previous stages established:
 
-cat artifacts/qsp-stage236.sha256
+Claim
+→ Evidence
+→ Signature
+→ Transparency
+→ Signed Release
 
----
+Stage237 adds:
 
-### 2. Verify GPG Signature
+→ SBOM
+→ Build Provenance
+Security Impact
 
-gpg --verify artifacts/qsp-stage236.tar.gz.asc artifacts/qsp-stage236.tar.gz
+Stage237 ensures:
 
-Expected:
+What is included (SBOM)
+Where it came from (Provenance)
+That it was not tampered with (Attestation)
 
-- Good signature from project key
-- Artifact integrity confirmed
+👉 This enables Supply Chain Security
 
----
+Evolution Path
+Claim
+→ Evidence
+→ CI Integration
+→ Signed Evidence
+→ Transparency Log
+→ Merkle Proof
+→ Multi-Signature
+→ Verified Commits
+→ Signed Release (Stage236)
+→ SBOM + Provenance (Stage237)
+Conclusion
 
-### 3. Verify Signed Tag
+Stage237 transitions QSP into a new class of systems:
 
-git tag -v v0.236
+From verifiable artifacts
+to verifiable software supply chains
 
----
-
-## Security Value
-
-Stage236 improves supply chain trust:
-
-- protects release authenticity
-- enables independent verification
-- strengthens artifact integrity
-- bridges repository trust → distribution trust
-
-This stage answers:
-
-"Is the distributed artifact truly produced by the project owner?"
-
----
-
-## Evolution Path
-
-Claim  
-→ Evidence  
-→ CI linkage  
-→ Signed evidence  
-→ Transparency log  
-→ Merkle proof  
-→ Signed checkpoint  
-→ Checkpoint history  
-→ External monitor  
-→ Independent verification  
-→ Executable PoC  
-→ Fail evidence persistence  
-→ Signed fail evidence  
-→ Signed bundles  
-→ Multi-signer  
-→ External signatures  
-→ GitHub verified commits  
-→ **Signed Release (Stage236)**
-
----
-
-## Release
-
-https://github.com/mokkunsuzuki-code/stage236/releases/tag/v0.236
-
----
-
-## License
+License
 
 MIT License © 2025 Motohiro Suzuki
-EOF
