@@ -11,12 +11,10 @@ rm -f "$ARTIFACT"
 
 if [ -f README.md ]; then
   tar -czf "$ARTIFACT" \
-    --exclude='.git' \
-    --exclude='out' \
-    --exclude='__pycache__' \
-    --exclude='.pytest_cache' \
-    --exclude="$ARTIFACT" \
-    .
+    README.md \
+    tools \
+    docs \
+    .github
 else
   echo "[ERROR] README.md が見つかりません"
   exit 1
