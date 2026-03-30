@@ -10,17 +10,13 @@ ARTIFACT="stage239-source-bundle.tar.gz"
 rm -f "$ARTIFACT"
 
 if [ -f README.md ]; then
-  tar \
-    --sort=name \
-    --mtime='UTC 2025-01-01' \
-    --owner=0 \
-    --group=0 \
-    --numeric-owner \
+  tar -czf "$ARTIFACT" \
     --exclude='.git' \
     --exclude='out' \
     --exclude='__pycache__' \
     --exclude='.pytest_cache' \
-    -czf "$ARTIFACT" .
+    --exclude="$ARTIFACT" \
+    .
 else
   echo "[ERROR] README.md が見つかりません"
   exit 1
