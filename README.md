@@ -1,148 +1,521 @@
-Stage238: SLSA-aligned Build via Reusable Workflow and Policy
+# Stage239: Verification Policy Enforcement
+
+MIT License © 2025 Motohiro Suzuki
 
 ## Overview
 
-Stage238 upgrades the build and attestation model from a single workflow implementation to a **policy-governed reusable workflow architecture**.
+Stage239 upgrades the project from **attestation generation** to **verification policy enforcement**.
 
-This stage ensures that:
+In earlier stages, the build produced provenance and SBOM attestations as verifiable evidence.
+In this stage, the workflow goes further:
 
-- All build provenance is generated through a centralized reusable workflow
-- SBOM generation and attestation are standardized
-- Build logic is no longer duplicated across workflows
-- Supply-chain evidence generation becomes policy-bound
+- build provenance attestation must exist
+- SBOM attestation must exist
+- both attestations must verify successfully
+- the signer workflow must match the expected reusable workflow
+- the artifact identity must match the expected subject
+- the SBOM predicate type must be SPDX 2.3
 
----
+If these conditions are not satisfied, the build is rejected.
 
-## Key Concept
+This means the repository no longer says only:
 
-Previous stage:
+> “we created attestations”
 
-Stage237  
-→ Attestation is generated
+It now enforces:
 
-Stage238:
+> “we do not accept builds unless the attestation policy is satisfied”
 
-→ **Attestation generation is standardized and enforced via reusable workflow + policy**
-
----
-
-## Architecture
-
-### 1. Caller Workflow (Policy Entry Point)
-
-`.github/workflows/stage238-slsa-policy.yml`
-
-- Defines allowed entrypoint
-- Delegates execution to reusable workflow
-- Does not implement build logic directly
+That is the core value of Stage239.
 
 ---
 
-### 2. Reusable Workflow (Policy Core)
+## Why this stage matters
 
-`.github/workflows/reusable-slsa-build.yml`
+This stage changes the security posture from **evidence production** to **admission control**.
 
-Responsible for:
+### Before
+- build artifacts were generated
+- attestations were attached
+- evidence existed
 
-- Artifact build
-- SHA256 digest generation
-- SBOM generation (SPDX via Syft)
-- Artifact upload
-- Build provenance attestation
-- SBOM attestation
+### After
+- evidence is not enough by itself
+- verification is mandatory
+- policy mismatch causes workflow failure
 
----
-
-### 3. Policy Document
-
-`docs/slsa_policy.md`
-
-Defines:
-
-- Allowed build path
-- Required permissions
-- Expected outputs
-- Reviewer verification points
+This is a meaningful step toward stronger supply-chain security governance.
 
 ---
 
-## Build Outputs
+## Security meaning
 
-- `stage238-source-bundle.tar.gz`
-- `stage238-source-bundle.sha256`
-- SPDX SBOM (`.spdx.json`)
-- GitHub build provenance attestation
-- GitHub SBOM attestation
-- Sigstore signature
-- Rekor transparency log entry
+Stage239 introduces a simple but strong policy:
 
----
+1. provenance must exist
+2. SBOM must exist
+3. provenance must verify
+4. SBOM must verify
+5. expected signer workflow must match
+6. expected artifact subject must match
+7. SBOM predicate type must be SPDX 2.3
 
-## Security Meaning
+If any one of these checks fails, the CI run fails.
 
-This stage does NOT claim:
-
-- Full SLSA compliance
-- Complete supply-chain security guarantees
-
-Instead, it provides:
-
-- Governance over how provenance is generated
-- Reproducible and auditable build structure
-- Standardized attestation pipeline
+This makes the project stricter, clearer, and more externally auditable.
 
 ---
 
-## Local Verification
+## Repository structure
 
-```bash
-python3 tools/verify_stage238_policy.py
-./tools/build_stage238_artifact.sh
-GitHub Actions Verification
+```text
+.github/workflows/
+  slsa-governed-build.yml
+  stage239-verification-policy.yml
 
-Run:
+docs/
+  verification_policy.md
 
-stage238-slsa-policy
+tools/
+  build_stage239_artifact.sh
+  check_attestation_policy.py
 
-Verify:
+out/
+  policy/
+Key files
+.github/workflows/slsa-governed-build.yml
 
-Artifact uploaded
-SBOM generated
-Provenance attestation created
-SBOM attestation created
-Rekor transparency entry exists
-Reviewer Guide
+Reusable workflow that:
 
-A reviewer should confirm:
+checks out the repository
+builds the source bundle artifact
+generates the SPDX SBOM
+uploads the build artifact and SBOM
+creates provenance attestation
+creates SBOM attestation
+.github/workflows/stage239-verification-policy.yml
 
-Caller workflow only invokes reusable workflow
-Reusable workflow uses workflow_call
-Attestation steps are centralized
-No duplicate build logic exists
-Outputs are consistent across runs
-Why This Matters
+Main workflow that:
 
-This stage shifts the system from:
+calls the reusable governed build workflow
+downloads the generated artifact and SBOM
+verifies provenance attestation
+verifies SBOM attestation
+enforces the verification policy
+uploads policy evidence
+tools/build_stage239_artifact.sh
 
-"Attestation exists"
+Builds the source bundle:
+
+README.md
+tools/
+docs/
+.github/
+
+This explicit file list avoids unstable archive behavior in CI.
+
+tools/check_attestation_policy.py
+
+Checks whether the verification result satisfies the expected policy.
+
+It validates:
+
+attestation presence
+predicate type
+artifact subject
+repository identity
+signer workflow identity
+
+If policy checks fail, it exits non-zero.
+
+Workflow logic
+
+The Stage239 flow is:
+
+Build
+↓
+Generate provenance attestation
+↓
+Generate SBOM attestation
+↓
+Verify provenance attestation
+↓
+Verify SBOM attestation
+↓
+Check policy conditions
+↓
+Accept or reject build
+
+More concretely:
+
+Artifact
+↓
+Attestation
+↓
+Verification
+↓
+Policy
+↓
+Admission / Rejection
+Local build
+
+You can test the artifact build locally:
+
+chmod +x tools/build_stage239_artifact.sh
+./tools/build_stage239_artifact.sh
+
+Expected output:
+
+[OK] built: stage239-source-bundle.tar.gz
+GitHub Actions
+
+The main workflow is:
+
+stage239-verification-policy
+
+The reusable workflow is:
+
+slsa-governed-build
+
+A successful run means:
+
+the source bundle was built
+the SBOM was generated
+provenance attestation was created
+SBOM attestation was created
+both were verified
+policy checks passed
+Evidence produced
+
+Stage239 produces policy-oriented evidence such as:
+
+source bundle artifact
+SPDX SBOM
+provenance verification result
+SBOM verification result
+policy result JSON
+
+This stage is important because the evidence is not only generated, but also used to make an accept/reject decision.
+
+What changed from Stage238
+Stage238
+created attestations
+moved toward governed builds
+Stage239
+verifies the attestations
+enforces explicit acceptance conditions
+rejects builds that do not satisfy policy
+
+So Stage239 is not just “more evidence”.
+
+It is a move toward enforced verification policy.
+
+External review value
+
+For an external reviewer, Stage239 shows that the repository now supports:
+
+reproducible evidence production
+verifiable attestations
+policy-based acceptance control
+explicit rejection on mismatch
+
+This is stronger than a repository that only publishes artifacts.
+It demonstrates that supply-chain evidence is operationally enforced.
+
+Limitations
+
+Stage239 is a practical enforcement step, not a full trust framework.
+
+For example:
+
+it does not solve all trust bootstrapping questions
+it does not replace broader organizational policy systems
+it focuses on repository-level CI enforcement
+
+Still, it is a meaningful and concrete improvement in security engineering practice.
+
+Conclusion
+
+Stage239 establishes:
+
+attestation generation
+attestation verification
+policy enforcement
+build rejection on mismatch
+
+This stage marks the transition from:
+
+“evidence exists”
 
 to:
 
-"Attestation is generated through a controlled, reusable, policy-defined path"
+“evidence must satisfy policy, or the build is not accepted”
 
-This improves:
+That is the core achievement of Stage239.
 
-Reproducibility
-Auditability
-Trust in supply-chain evidence
-Next Stage
 
-Stage239:
+---
 
-→ Verification Policy Enforcement
+# GitHub更新
 
-Only artifacts that satisfy policy conditions are accepted.
+README を上書きして、push してください。
 
-License
+```bash
+cd ~/Desktop/test/stage239
+
+cat > README.md << 'EOF'
+# Stage239: Verification Policy Enforcement
 
 MIT License © 2025 Motohiro Suzuki
+
+## Overview
+
+Stage239 upgrades the project from **attestation generation** to **verification policy enforcement**.
+
+In earlier stages, the build produced provenance and SBOM attestations as verifiable evidence.
+In this stage, the workflow goes further:
+
+- build provenance attestation must exist
+- SBOM attestation must exist
+- both attestations must verify successfully
+- the signer workflow must match the expected reusable workflow
+- the artifact identity must match the expected subject
+- the SBOM predicate type must be SPDX 2.3
+
+If these conditions are not satisfied, the build is rejected.
+
+This means the repository no longer says only:
+
+> “we created attestations”
+
+It now enforces:
+
+> “we do not accept builds unless the attestation policy is satisfied”
+
+That is the core value of Stage239.
+
+---
+
+## Why this stage matters
+
+This stage changes the security posture from **evidence production** to **admission control**.
+
+### Before
+- build artifacts were generated
+- attestations were attached
+- evidence existed
+
+### After
+- evidence is not enough by itself
+- verification is mandatory
+- policy mismatch causes workflow failure
+
+This is a meaningful step toward stronger supply-chain security governance.
+
+---
+
+## Security meaning
+
+Stage239 introduces a simple but strong policy:
+
+1. provenance must exist
+2. SBOM must exist
+3. provenance must verify
+4. SBOM must verify
+5. expected signer workflow must match
+6. expected artifact subject must match
+7. SBOM predicate type must be SPDX 2.3
+
+If any one of these checks fails, the CI run fails.
+
+This makes the project stricter, clearer, and more externally auditable.
+
+---
+
+## Repository structure
+
+```text
+.github/workflows/
+  slsa-governed-build.yml
+  stage239-verification-policy.yml
+
+docs/
+  verification_policy.md
+
+tools/
+  build_stage239_artifact.sh
+  check_attestation_policy.py
+
+out/
+  policy/
+Key files
+.github/workflows/slsa-governed-build.yml
+
+Reusable workflow that:
+
+checks out the repository
+builds the source bundle artifact
+generates the SPDX SBOM
+uploads the build artifact and SBOM
+creates provenance attestation
+creates SBOM attestation
+.github/workflows/stage239-verification-policy.yml
+
+Main workflow that:
+
+calls the reusable governed build workflow
+downloads the generated artifact and SBOM
+verifies provenance attestation
+verifies SBOM attestation
+enforces the verification policy
+uploads policy evidence
+tools/build_stage239_artifact.sh
+
+Builds the source bundle:
+
+README.md
+tools/
+docs/
+.github/
+
+This explicit file list avoids unstable archive behavior in CI.
+
+tools/check_attestation_policy.py
+
+Checks whether the verification result satisfies the expected policy.
+
+It validates:
+
+attestation presence
+predicate type
+artifact subject
+repository identity
+signer workflow identity
+
+If policy checks fail, it exits non-zero.
+
+Workflow logic
+
+The Stage239 flow is:
+
+Build
+↓
+Generate provenance attestation
+↓
+Generate SBOM attestation
+↓
+Verify provenance attestation
+↓
+Verify SBOM attestation
+↓
+Check policy conditions
+↓
+Accept or reject build
+
+More concretely:
+
+Artifact
+↓
+Attestation
+↓
+Verification
+↓
+Policy
+↓
+Admission / Rejection
+Local build
+
+You can test the artifact build locally:
+
+chmod +x tools/build_stage239_artifact.sh
+./tools/build_stage239_artifact.sh
+
+Expected output:
+
+[OK] built: stage239-source-bundle.tar.gz
+GitHub Actions
+
+The main workflow is:
+
+stage239-verification-policy
+
+The reusable workflow is:
+
+slsa-governed-build
+
+A successful run means:
+
+the source bundle was built
+the SBOM was generated
+provenance attestation was created
+SBOM attestation was created
+both were verified
+policy checks passed
+Evidence produced
+
+Stage239 produces policy-oriented evidence such as:
+
+source bundle artifact
+SPDX SBOM
+provenance verification result
+SBOM verification result
+policy result JSON
+
+This stage is important because the evidence is not only generated, but also used to make an accept/reject decision.
+
+What changed from Stage238
+Stage238
+created attestations
+moved toward governed builds
+Stage239
+verifies the attestations
+enforces explicit acceptance conditions
+rejects builds that do not satisfy policy
+
+So Stage239 is not just “more evidence”.
+
+It is a move toward enforced verification policy.
+
+External review value
+
+For an external reviewer, Stage239 shows that the repository now supports:
+
+reproducible evidence production
+verifiable attestations
+policy-based acceptance control
+explicit rejection on mismatch
+
+This is stronger than a repository that only publishes artifacts.
+It demonstrates that supply-chain evidence is operationally enforced.
+
+Limitations
+
+Stage239 is a practical enforcement step, not a full trust framework.
+
+For example:
+
+it does not solve all trust bootstrapping questions
+it does not replace broader organizational policy systems
+it focuses on repository-level CI enforcement
+
+Still, it is a meaningful and concrete improvement in security engineering practice.
+
+Conclusion
+
+Stage239 establishes:
+
+attestation generation
+attestation verification
+policy enforcement
+build rejection on mismatch
+
+This stage marks the transition from:
+
+“evidence exists”
+
+to:
+
+“evidence must satisfy policy, or the build is not accepted”
+
+That is the core achievement of Stage239.
+EOF
