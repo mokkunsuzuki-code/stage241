@@ -1,0 +1,50 @@
+name: stage241-multi-party
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
+  contents: read
+
+jobs:
+  multi-party-verification:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependency
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml
+
+      - name: Build artifact
+        run: |
+          chmod +x tools/build_stage241_artifact.sh
+          ./tools/build_stage241_artifact.sh
+
+      - name: Sign artifact
+        run: |
+          chmod +x tools/sign_stage241_artifact.sh
+          ./tools/sign_stage241_artifact.sh
+
+      - name: Verify threshold
+        run: |
+          python3 tools/verify_multi_party.py stage241-source-bundle.tar.gz
+
+      - name: Upload multi-party evidence
+        uses: actions/upload-artifact@v6
+        with:
+          name: stage241-multi-party-evidence
+          path: out/multi_party

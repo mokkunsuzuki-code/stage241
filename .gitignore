@@ -18,3 +18,15 @@ keys/private/
 # generated source bundles
 stage239-source-bundle.tar.gz
 stage240-source-bundle.tar.gz
+
+# private keys
+keys/*_private.pem
+
+# generated source bundles
+stage241-source-bundle.tar.gz
+
+# generated signatures
+signatures/*.sig
+
+# generated outputs
+out/
