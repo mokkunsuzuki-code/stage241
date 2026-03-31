@@ -14,3 +14,7 @@ keys/private/
 
 # local gpg temp homes
 .gnupg-stage234/
+
+# generated source bundles
+stage239-source-bundle.tar.gz
+stage240-source-bundle.tar.gz
