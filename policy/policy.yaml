@@ -1,0 +1,16 @@
+version: 1
+
+required_attestations:
+  - provenance
+  - sbom
+
+predicate_types:
+  - https://slsa.dev/provenance/v1
+  - https://spdx.dev/Document/v2.3
+
+identity:
+  repository: mokkunsuzuki-code/stage240
+  workflow: .github/workflows/slsa-governed-build.yml
+
+artifact:
+  name: stage240-source-bundle.tar.gz
