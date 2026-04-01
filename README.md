@@ -1,267 +1,199 @@
-# Stage240: External Verification Gate
+# Stage241: Multi-Party Verification Gate
 
 MIT License © 2025 Motohiro Suzuki
 
 ## Overview
 
-Stage240 extends verification policy enforcement beyond GitHub Actions.
+Stage241 upgrades verification from external validation to multi-party approval.
 
-Stage239 established CI-based verification policy enforcement:
-builds were accepted or rejected inside CI based on provenance and SBOM attestation checks.
+Stage240 made it possible to verify artifacts outside CI.
 
-Stage240 goes one step further.
+Stage241 goes further.
 
-This stage introduces an external verification gate so that the same policy can be enforced outside CI.
+This stage introduces threshold-based verification, where multiple independent signer identities are required for approval.
 
-This means verification is no longer limited to:
+A build is accepted only if the required number of signatures is satisfied.
 
-- "GitHub Actions says pass"
+Current configuration:
 
-It now supports:
+- owner signer
+- auditor signer
+- threshold: 2-of-2
 
-- "anyone can verify and enforce the same policy independently"
-
-That is the core value of Stage240.
+This means a single signer is no longer sufficient.
 
 ---
 
 ## Why this stage matters
 
-This stage upgrades the trust model from CI-local enforcement to externally reproducible enforcement.
+This stage upgrades the trust model.
 
-### Before
-- CI generated attestations
-- CI verified attestations
-- CI rejected policy mismatches
+### Before (Stage240)
+- external verification possible
+- policy enforced outside CI
 
-### After
-- the same verification logic can run outside CI
-- third parties can enforce the same policy independently
-- trust is no longer bound only to the repository's own workflow
+### After (Stage241)
+- multiple signer identities required
+- approval distributed across keys
+- single-key compromise is insufficient
 
-This is an important step toward externally auditable verification.
+This is a shift from verification to distributed approval.
 
 ---
 
-## Security meaning
+## Core concept
 
-Stage240 adds three core elements:
+Stage241 introduces:
 
-1. a policy definition file
-2. an external verification CLI
-3. an external pass/fail gate
+- multiple signer identities
+- threshold policy
+- signature verification per signer
+- pass/fail based on signer count
 
-The policy requires:
-
-- provenance attestation
-- SBOM attestation
-- repository identity match
-- signer workflow match
-- expected artifact name match
-- SPDX 2.3 SBOM predicate
-
-If any of these checks fail, verification fails.
-
-This means the project no longer depends only on CI-internal policy enforcement.
-The same decision can now be reproduced externally.
+The decision is no longer binary from a single authority.
 
 ---
 
 ## Repository structure
 
-```text
-.github/workflows/
-  slsa-governed-build.yml
-  stage240-external-verification.yml
 
-docs/
-  external_verification.md
+keys/
+owner_public.pem
+auditor_public.pem
 
 policy/
-  policy.yaml
+policy.yaml
+
+signatures/
+owner.sig
+auditor.sig
 
 tools/
-  build_stage240_artifact.sh
-  verify_external_policy.py
+build_stage241_artifact.sh
+sign_stage241_artifact.sh
+verify_multi_party.py
+
+docs/
+multi_party_verification.md
 
 out/
-  external_verification/
-Key files
-policy/policy.yaml
+multi_party/
 
-Defines the external verification policy, including:
 
-required attestation types
-accepted predicate types
-repository identity
-signer workflow identity
-expected artifact name
-tools/build_stage240_artifact.sh
+---
 
-Builds the Stage240 source bundle artifact:
+## Workflow
 
-README.md
-LICENSE
-tools/
-docs/
-.github/
-policy/
+The Stage241 process:
 
-This uses an explicit file list to avoid unstable archive behavior.
+Build artifact  
+↓  
+Sign with owner key  
+↓  
+Sign with auditor key  
+↓  
+Verify each signature  
+↓  
+Check threshold (2-of-2)  
+↓  
+Pass / Fail  
 
-tools/verify_external_policy.py
+---
 
-Verifies the artifact outside CI using GitHub attestation verification.
+## Local usage
 
-It checks:
+Build artifact:
 
-artifact presence
-artifact name
-provenance verification
-SBOM verification
-signer workflow identity
-repository identity
+```bash
+./tools/build_stage241_artifact.sh
 
-It writes external verification evidence to:
+Sign artifact:
 
-out/external_verification/
-.github/workflows/slsa-governed-build.yml
+./tools/sign_stage241_artifact.sh
 
-Reusable workflow that:
+Verify multi-party threshold:
 
-checks out the repository
-builds the source bundle
-generates the SPDX SBOM
-uploads the artifact and SBOM
-creates provenance attestation
-creates SBOM attestation
-.github/workflows/stage240-external-verification.yml
+python3 tools/verify_multi_party.py stage241-source-bundle.tar.gz
+CI behavior
 
-Main workflow that:
+GitHub Actions in Stage241:
 
-calls the reusable governed build
-downloads the built artifact
-downloads the SBOM
-runs the external verification CLI
-uploads external verification evidence
-Workflow logic
+validates repository structure
+ensures policy and public keys exist
+verifies the threshold verification tool integrity
 
-The Stage240 flow is:
+Important:
 
-Build
-↓
-Generate provenance attestation
-↓
-Generate SBOM attestation
-↓
-Download artifact outside build job
-↓
-Run external verification CLI
-↓
-Pass / Fail
+Private signing keys are intentionally excluded from CI.
 
-More conceptually:
+This ensures:
 
-Artifact
-↓
-Attestation
-↓
-Independent Verification
-↓
-Policy Enforcement
-↓
-Admission / Rejection
-
-Local usage
-
-You can build the artifact locally:
-
-chmod +x tools/build_stage240_artifact.sh
-./tools/build_stage240_artifact.sh
-
-Then verify it with the external verification tool:
-
-python3 tools/verify_external_policy.py stage240-source-bundle.tar.gz
-GitHub Actions
-
-The reusable workflow is:
-
-slsa-governed-build
-
-The main workflow is:
-
-stage240-external-verification
-
-A successful run means:
-
-the source bundle was built
-the SBOM was generated
-provenance attestation was created
-SBOM attestation was created
-the external verification CLI validated the artifact
-policy checks passed
-What changed from Stage239
-Stage239
-CI verified attestations
-CI enforced accept/reject decisions
+no secret leakage
+signing remains external
+verification remains reproducible
+What changed from Stage240
 Stage240
-the same policy logic is exposed as an external verification gate
-third parties can run the same verification independently
-policy enforcement is no longer CI-only
+verification can be performed externally
+CI-independent validation
+Stage241
+multiple approvals required
+threshold-based decision
+single signer no longer sufficient
 
-So Stage240 is not just “more verification”.
+This is a transition from:
 
-It is a shift from:
-
-CI-only admission control
+"anyone can verify"
 
 to:
 
-independently reproducible policy enforcement
-External review value
+"multiple parties must approve"
 
-For an external reviewer, Stage240 shows that the repository now supports:
+Security meaning
 
-attestation production
-attestation verification
-CI policy enforcement
-external policy reproduction
-independent pass/fail judgment
+Stage241 demonstrates:
 
-This is stronger than a repository that only says its own CI passed.
-It shows that verification logic can be reused outside the original workflow.
+separation of signer identities
+removal of single-key authority
+threshold-based acceptance
+stronger resistance to key compromise
+
+Even if one key is compromised, approval is not granted.
 
 Limitations
 
-Stage240 is a real external verification step, but it is not yet a full multi-party trust framework.
+Current implementation:
 
-For example:
+both keys are controlled by the same operator context
+not yet a fully independent third-party trust model
 
-it still relies on GitHub-hosted attestation retrieval
-it does not yet provide multi-organization trust roots
-it does not yet implement threshold approval
-it does not yet include non-GitHub transparency infrastructure
+However:
 
-Still, it is a meaningful advancement from CI-bound verification to externally enforceable verification.
+identity separation is established
+threshold enforcement is implemented
+architecture supports external expansion
+Future direction
 
+Next evolution (Stage242):
+
+introduce external reviewer key
+move to 2-of-3 or 3-of-3 threshold
+enable true distributed trust
 Conclusion
 
-Stage240 establishes:
+Stage241 establishes:
 
-policy definition
-external verification CLI
-external verification evidence
-independent pass/fail judgment outside CI
+multi-party verification
+threshold enforcement
+distributed approval model
+CI-safe architecture
 
 This stage marks the transition from:
 
-"CI verifies the build"
+"verification is reproducible"
 
 to:
 
-"verification can be enforced independently outside CI"
-
-That is the core achievement of Stage240.
+"approval requires multiple independent identities"
 
 License
 
